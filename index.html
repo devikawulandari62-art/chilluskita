@@ -77,17 +77,14 @@
           CHILLUS! - Chill, Crunch, Cheers!
         </h1>
         <p class="text-red-100 text-sm md:text-base mb-4 leading-relaxed">
-          Nikmati pilus cikur renyah khas Bangkalan Madura. Tersedia ukuran Regular (6k), Sharing (12k), Mix Regular (8k), & Mix Sharing (14k).
+          Nikmati pilus cikur renyah khas Bangkalan Madura. Regular (6k), Mix Regular (8k), Sharing (12k), & Mix Sharing (14k).
         </p>
       </div>
     </div>
 
-    <!-- KATEGORI & FILTER MENU -->
-    <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-4">
-      <button onclick="filterCategory('all')" id="cat-all" class="px-4 py-2 rounded-xl text-xs font-bold bg-brand-red text-white shadow transition">Semua Produk</button>
-      <button onclick="filterCategory('reg6')" id="cat-reg6" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition">Regular 50gr (Rp 6k)</button>
-      <button onclick="filterCategory('mix8')" id="cat-mix8" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition">Mix Regular 50gr (Rp 8k)</button>
-      <button onclick="filterCategory('share12')" id="cat-share12" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition">Sharing & Mix 100gr (Rp 12k)</button>
+    <!-- KATEGORI & FILTER MENU (Dinamis sinkron dengan Dashboard Penjual) -->
+    <div id="categoryFiltersContainer" class="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-4">
+      <!-- Rendered via JS -->
     </div>
 
     <!-- KATALOG PRODUK -->
@@ -219,6 +216,7 @@
 
     let cart = [];
     let products = [];
+    let categories = [];
     let activeCategory = 'all';
 
     async function fetchProductsFromCloud() {
@@ -227,21 +225,39 @@
           headers: { 'X-Master-Key': API_KEY }
         });
         const data = await res.json();
-        if (data.record && data.record.products) {
-          products = data.record.products;
+        if (data.record) {
+          products = data.record.products || [];
+          categories = data.record.categories || [
+            { id: 'all', name: 'Semua Produk' },
+            { id: 'reg6', name: 'Regular 50gr (Rp 6k)', priceFilter: 6000 },
+            { id: 'mix8', name: 'Mix Regular 50gr (Rp 8k)', priceFilter: 8000 },
+            { id: 'share12', name: 'Sharing 100gr (Rp 12k)', priceFilter: 12000 },
+            { id: 'mix14', name: 'Mix Sharing 100gr (Rp 14k)', priceFilter: 14000 }
+          ];
         }
       } catch (e) {
-        console.log('Gagal memuat produk');
+        console.log('Gagal memuat data');
       }
+      renderCategoryFilters();
       renderProducts();
     }
 
-    function filterCategory(cat) {
-      activeCategory = cat;
-      ['all', 'reg6', 'mix8', 'share12'].forEach(c => {
-        const btn = document.getElementById(`cat-${c}`);
-        if(btn) btn.className = c === cat ? 'px-4 py-2 rounded-xl text-xs font-bold bg-brand-red text-white shadow transition' : 'px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition';
+    function renderCategoryFilters() {
+      const container = document.getElementById('categoryFiltersContainer');
+      container.innerHTML = '';
+      categories.forEach(cat => {
+        const isActive = activeCategory === cat.id;
+        container.innerHTML += `
+          <button onclick="filterCategory('${cat.id}')" id="cat-${cat.id}" class="px-4 py-2 rounded-xl text-xs font-bold ${isActive ? 'bg-brand-red text-white shadow' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'} transition">
+            ${cat.name}
+          </button>
+        `;
       });
+    }
+
+    function filterCategory(catId) {
+      activeCategory = catId;
+      renderCategoryFilters();
       renderProducts();
     }
 
@@ -252,9 +268,10 @@
 
       let filtered = products.filter(p => p.name.toLowerCase().includes(query));
 
-      if (activeCategory === 'reg6') filtered = filtered.filter(p => p.price === 6000);
-      else if (activeCategory === 'mix8') filtered = filtered.filter(p => p.price === 8000);
-      else if (activeCategory === 'share12') filtered = filtered.filter(p => p.price === 12000);
+      const selectedCat = categories.find(c => c.id === activeCategory);
+      if (selectedCat && selectedCat.priceFilter) {
+        filtered = filtered.filter(p => p.price === selectedCat.priceFilter);
+      }
 
       if (filtered.length === 0) {
         grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">Tidak ada produk dalam kategori ini.</div>`;
@@ -310,7 +327,7 @@
           await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-            body: JSON.stringify({ orders: data.record.orders || [], products: prods })
+            body: JSON.stringify({ orders: data.record.orders || [], products: prods, categories: data.record.categories })
           });
           products = prods;
           renderProducts();
@@ -425,10 +442,9 @@
           await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-            body: JSON.stringify({ orders: currentOrders, products: currentProducts })
+            body: JSON.stringify({ orders: currentOrders, products: currentProducts, categories: cloudData.record.categories })
           });
 
-          // Tampilkan Struk
           document.getElementById('receiptDetails').innerHTML = `
             <div><b>ID:</b> ${orderId}</div>
             <div><b>Nama:</b> ${name}</div>
