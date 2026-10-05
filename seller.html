@@ -28,6 +28,9 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <button onclick="loadCloudData()" class="text-xs bg-amber-500 hover:bg-amber-400 text-brand-darkgreen px-3 py-1.5 rounded-lg font-bold shadow">
+          <i class="fa-solid fa-rotate mr-1"></i> Refresh Data
+        </button>
         <a href="index.html" target="_blank" class="text-xs bg-red-700 hover:bg-red-800 text-white px-3 py-1.5 rounded-lg font-bold">
           <i class="fa-solid fa-external-link-alt mr-1"></i> Web Pembeli
         </a>
@@ -98,13 +101,11 @@
 
     <!-- TAB 2: KELOLA PRODUK & KELOLA NAMA FILTER KATEGORI -->
     <section id="tabProducts" class="hidden space-y-6">
-      <!-- Kotak Kelola Nama Filter -->
       <div class="bg-white rounded-2xl border shadow-sm p-6 space-y-3">
         <h2 class="font-bold text-gray-800 text-sm uppercase tracking-wide text-brand-green"><i class="fa-solid fa-tags mr-1"></i> Edit Nama Filter Kategori (Web Pembeli)</h2>
         <div id="categoryEditorList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3"></div>
       </div>
 
-      <!-- Kotak Kelola Produk -->
       <div class="bg-white rounded-2xl border shadow-sm p-6 space-y-4">
         <div class="flex justify-between items-center">
           <h2 class="font-bold text-gray-800 text-base">Atur Produk, Harga Jual, Modal, & Stok</h2>
@@ -187,7 +188,7 @@
               <td class="p-3">${itemsText}</td>
               <td class="p-3"><div class="font-bold">Rp ${o.totalPrice.toLocaleString('id-ID')}</div><span class="text-[10px] px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-800">${o.payMethod}</span></td>
               <td class="p-3"><a href="${o.custMaps}" target="_blank" class="text-blue-600 underline font-bold">Maps</a></td>
-              <td class="p-3">${o.proofImg ? `<a href="${o.proofImg}" target="_blank" class="text-red-600 font-bold">Bukti</a>` : 'Cash'}</td>
+              <td class="p-3">${o.proofImg ? `<a href="${o.proofImg}" target="_blank" class="text-red-600 font-bold">Lihat</a>` : '<span class="text-gray-400">Tanpa Bukti</span>'}</td>
               <td class="p-3"><button onclick="toggleStatus(${idx})" class="px-2 py-1 rounded text-[10px] font-bold ${o.status === 'Selesai' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${o.status}</button></td>
             </tr>
           `;
