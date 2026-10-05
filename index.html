@@ -164,16 +164,11 @@
           </select>
         </div>
 
-        <div id="paymentDetailBox" class="hidden bg-orange-50 border border-orange-200 p-3 rounded-xl text-xs space-y-2">
-          <div>
-            <span class="font-bold text-gray-800">Transfer via SeaBank:</span>
-            <div class="text-base font-black text-brand-red select-all">9017 7679 5523</div>
-            <div class="text-gray-600">a.n. CHILLUS! Bangkalan Madura</div>
-          </div>
-          <div class="text-[11px] text-gray-500 italic">*(Opsional) Anda bisa mengupload bukti transfer atau langsung selesaikan pesanan.</div>
-          <div>
-            <input type="file" id="transferProof" accept="image/*" class="w-full text-xs text-gray-600 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-brand-red file:text-white">
-          </div>
+        <div id="paymentDetailBox" class="hidden bg-orange-50 border border-orange-200 p-3 rounded-xl text-xs space-y-1">
+          <span class="font-bold text-gray-800">Transfer via SeaBank:</span>
+          <div class="text-base font-black text-brand-red select-all">9017 7679 5523</div>
+          <div class="text-gray-600">a.n. CHILLUS! Bangkalan Madura</div>
+          <div class="text-[11px] text-gray-500 italic pt-1">*(Silakan transfer sesuai total tagihan, lalu klik Selesaikan Pesanan).</div>
         </div>
 
         <button type="submit" id="btnSubmitOrder" class="w-full bg-brand-red hover:bg-brand-darkred text-white font-bold py-3 rounded-xl shadow-lg transition">
@@ -407,56 +402,69 @@
       const maps = document.getElementById('custMaps').value;
       const notes = document.getElementById('custNotes').value;
       const pay = document.getElementById('payMethod').value;
-      const proofInput = document.getElementById('transferProof');
 
-      const finishOrder = async (proofUrl) => {
-        try {
-          const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
-          const cloudData = await getRes.json();
-          let currentOrders = cloudData.record.orders || [];
-          let currentProducts = cloudData.record.products || products;
+      try {
+        const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
+        const cloudData = await getRes.json();
+        let currentOrders = cloudData.record.orders || [];
+        let currentProducts = cloudData.record.products || products;
+        let currentCategories = cloudData.record.categories || categories;
 
-          const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-          const orderId = 'CHL-' + Date.now().toString().slice(-5);
-          const orderData = {
-            id: orderId,
-            date: new Date().toLocaleString('id-ID'),
-            custName: name, custWA: wa, custMaps: maps, custNotes: notes,
-            items: [...cart], totalPrice: total, payMethod: pay, proofImg: proofUrl || '', status: 'Menunggu Konfirmasi'
-          };
+        const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+        const orderId = 'CHL-' + Date.now().toString().slice(-5);
+        const orderData = {
+          id: orderId,
+          date: new Date().toLocaleString('id-ID'),
+          custName: name, 
+          custWA: wa, 
+          custMaps: maps, 
+          custNotes: notes,
+          items: [...cart], 
+          totalPrice: total, 
+          payMethod: pay, 
+          proofImg: "", 
+          status: 'Menunggu Konfirmasi'
+        };
 
-          currentOrders.unshift(orderData);
-          cart.forEach(c => {
-            const prod = currentProducts.find(p => p.id === c.id);
-            if (prod) prod.stock = Math.max(0, prod.stock - c.qty);
-          });
+        currentOrders.unshift(orderData);
+        cart.forEach(c => {
+          const prod = currentProducts.find(p => p.id === c.id);
+          if (prod) prod.stock = Math.max(0, prod.stock - c.qty);
+        });
 
-          await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-            body: JSON.stringify({ orders: currentOrders, products: currentProducts, categories: cloudData.record.categories })
-          });
+        const updateRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json', 
+            'X-Master-Key': API_KEY 
+          },
+          body: JSON.stringify({ 
+            orders: currentOrders, 
+            products: currentProducts, 
+            categories: currentCategories 
+          })
+        });
 
-          document.getElementById('receiptDetails').innerHTML = `
-            <div><b>ID:</b> ${orderId}</div>
-            <div><b>Nama:</b> ${name}</div>
-            <div><b>Waktu:</b> ${orderData.date}</div>
-            <div class="border-t border-dashed my-1"></div>
-            ${cart.map(i=>`<div>${i.name} x${i.qty} = Rp${(i.price*i.qty).toLocaleString('id-ID')}</div>`).join('')}
-            <div class="border-t border-dashed my-1"></div>
-            <div class="font-bold text-brand-red">TOTAL: Rp ${total.toLocaleString('id-ID')} (${pay})</div>
-          `;
-          cart = []; updateCartUI(); closeCheckoutModal();
-          document.getElementById('receiptModal').classList.remove('hidden');
-        } catch(err) { alert('Gagal memproses pesanan, silakan coba lagi.'); }
-      };
+        if (!updateRes.ok) throw new Error('Gagal menyimpan ke server');
 
-      if (proofInput.files && proofInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = ev => finishOrder(ev.target.result);
-        reader.readAsDataURL(proofInput.files[0]);
-      } else {
-        finishOrder('');
+        document.getElementById('receiptDetails').innerHTML = `
+          <div><b>ID:</b> ${orderId}</div>
+          <div><b>Nama:</b> ${name}</div>
+          <div><b>Waktu:</b> ${orderData.date}</div>
+          <div class="border-t border-dashed my-1"></div>
+          ${cart.map(i=>`<div>${i.name} x${i.qty} = Rp${(i.price*i.qty).toLocaleString('id-ID')}</div>`).join('')}
+          <div class="border-t border-dashed my-1"></div>
+          <div class="font-bold text-brand-red">TOTAL: Rp ${total.toLocaleString('id-ID')} (${pay})</div>
+        `;
+        
+        cart = []; 
+        updateCartUI(); 
+        closeCheckoutModal();
+        document.getElementById('receiptModal').classList.remove('hidden');
+
+      } catch(err) {
+        console.error(err);
+        alert('Gagal memproses pesanan. Periksa koneksi internet Anda.');
       }
     }
 
