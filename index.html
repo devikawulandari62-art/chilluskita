@@ -82,16 +82,12 @@
       </div>
     </div>
 
-    <!-- KATEGORI & FILTER MENU (Dinamis sinkron dengan Dashboard Penjual) -->
-    <div id="categoryFiltersContainer" class="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-4">
-      <!-- Rendered via JS -->
-    </div>
+    <!-- KATEGORI & FILTER MENU -->
+    <div id="categoryFiltersContainer" class="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-4"></div>
 
     <!-- KATALOG PRODUK -->
     <section class="mb-10">
-      <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <!-- Rendered via JS -->
-      </div>
+      <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
     </section>
 
   </main>
@@ -174,8 +170,8 @@
             <div class="text-base font-black text-brand-red select-all">9017 7679 5523</div>
             <div class="text-gray-600">a.n. CHILLUS! Bangkalan Madura</div>
           </div>
-          <div class="pt-2 border-t border-orange-200">
-            <label class="block font-bold text-gray-800 mb-1">Upload Bukti Transfer <span class="text-red-500">*</span></label>
+          <div class="text-[11px] text-gray-500 italic">*(Opsional) Anda bisa mengupload bukti transfer atau langsung selesaikan pesanan.</div>
+          <div>
             <input type="file" id="transferProof" accept="image/*" class="w-full text-xs text-gray-600 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-brand-red file:text-white">
           </div>
         </div>
@@ -413,11 +409,7 @@
       const pay = document.getElementById('payMethod').value;
       const proofInput = document.getElementById('transferProof');
 
-      if (pay !== 'Cash' && (!proofInput.files || !proofInput.files[0])) {
-        alert('Harap upload bukti transfer!'); return;
-      }
-
-      const process = async (proofUrl) => {
+      const finishOrder = async (proofUrl) => {
         try {
           const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
           const cloudData = await getRes.json();
@@ -430,7 +422,7 @@
             id: orderId,
             date: new Date().toLocaleString('id-ID'),
             custName: name, custWA: wa, custMaps: maps, custNotes: notes,
-            items: [...cart], totalPrice: total, payMethod: pay, proofImg: proofUrl, status: 'Menunggu Konfirmasi'
+            items: [...cart], totalPrice: total, payMethod: pay, proofImg: proofUrl || '', status: 'Menunggu Konfirmasi'
           };
 
           currentOrders.unshift(orderData);
@@ -456,14 +448,16 @@
           `;
           cart = []; updateCartUI(); closeCheckoutModal();
           document.getElementById('receiptModal').classList.remove('hidden');
-        } catch(err) { alert('Gagal memproses pesanan.'); }
+        } catch(err) { alert('Gagal memproses pesanan, silakan coba lagi.'); }
       };
 
-      if (pay !== 'Cash' && proofInput.files && proofInput.files[0]) {
+      if (proofInput.files && proofInput.files[0]) {
         const reader = new FileReader();
-        reader.onload = e => process(e.target.result);
+        reader.onload = ev => finishOrder(ev.target.result);
         reader.readAsDataURL(proofInput.files[0]);
-      } else { process(''); }
+      } else {
+        finishOrder('');
+      }
     }
 
     document.addEventListener('DOMContentLoaded', fetchProductsFromCloud);
